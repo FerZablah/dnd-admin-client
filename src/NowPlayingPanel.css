@@ -1,0 +1,44 @@
+/* src/components/NowPlayingPanel.css */
+.now-playing-panel {
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #1f2937;
+  padding: 12px 14px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.now-playing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.now-playing-header h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.now-playing-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.now-playing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  flex: 1;          /* take all remaining height in the panel */
+  min-height: 0;    /* needed so overflow works inside flex */
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.now-playing-empty {
+  font-size: 0.8rem;
+  color: #6b7280;
+}

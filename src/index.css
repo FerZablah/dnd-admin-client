@@ -1,0 +1,187 @@
+/* Animated-image layout */
+.animated-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.animated-image-bgvideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.animated-image-foreground {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Floating in place */
+.animated-float {
+  animation-name: floatY;
+  animation-duration: var(--float-speed, 4s);
+  animation-delay: var(--float-delay, 0s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes floatY {
+  0% {
+    transform: translateY(calc(-1 * var(--float-amp, 10px)));
+  }
+  100% {
+    transform: translateY(var(--float-amp, 10px));
+  }
+}
+
+/* Shaking in place */
+.animated-shake {
+  animation-name: shakeX;
+  animation-duration: var(--shake-speed, 0.15s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes shakeX {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* Appearing (slide-in) */
+.animated-appear {
+  animation-duration: var(--appear-speed, 0.6s);
+  animation-fill-mode: both;
+}
+
+/* Sides */
+.animated-appear-from-left {
+  animation-name: appearFromLeft;
+}
+.animated-appear-from-right {
+  animation-name: appearFromRight;
+}
+.animated-appear-from-top {
+  animation-name: appearFromTop;
+}
+.animated-appear-from-bottom {
+  animation-name: appearFromBottom;
+}
+
+/* Corners */
+.animated-appear-from-top-left {
+  animation-name: appearFromTopLeft;
+}
+.animated-appear-from-top-right {
+  animation-name: appearFromTopRight;
+}
+.animated-appear-from-bottom-left {
+  animation-name: appearFromBottomLeft;
+}
+.animated-appear-from-bottom-right {
+  animation-name: appearFromBottomRight;
+}
+
+/* Keyframes for appear */
+@keyframes appearFromLeft {
+  from {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromRight {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromTop {
+  from {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromBottom {
+  from {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromTopLeft {
+  from {
+    transform: translate(-120%, -120%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromTopRight {
+  from {
+    transform: translate(120%, -120%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromBottomLeft {
+  from {
+    transform: translate(-120%, 120%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes appearFromBottomRight {
+  from {
+    transform: translate(120%, 120%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}

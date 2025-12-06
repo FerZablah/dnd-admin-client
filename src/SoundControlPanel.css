@@ -1,0 +1,38 @@
+/* src/components/SoundControlPanel.css */
+.sound-control {
+  display: flex;
+  min-height: 100vh;      /* use full screen height */
+  background: #020617;
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+
+.sound-control-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.sound-control-top {
+  display: flex;
+  gap: 16px;
+}
+
+.sound-control-top-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sound-control-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* NEW: allow children to use remaining height */
+}
