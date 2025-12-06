@@ -36,3 +36,18 @@
   flex-direction: column;
   min-height: 0; /* NEW: allow children to use remaining height */
 }
+
+.sound-control-clear-radio-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: #261019;
+  color: #ffd7dd;
+  box-shadow: 0 0 0 1px rgba(255, 112, 138, 0.4);
+}
+
+.sound-control-clear-radio-btn:hover {
+  background: #3a1320;
+}

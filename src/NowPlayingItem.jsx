@@ -1,269 +1,195 @@
-// src/components/NowPlayingItem.jsx
-import React, { useEffect, useRef, useState } from "react";
-import "./NowPlayingItem.css";
+import React, { useEffect, useRef, useState } from 'react';
+import NowPlayingItemView from './NowPlayingItemView';
+import './NowPlayingItem.css';
 
-function formatTime(seconds) {
-  if (!isFinite(seconds)) return "--:--";
-  const s = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(s / 60);
-  const secs = s % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-const OUTPUT_ROLES = [
-  { key: "speakers", label: "Speakers" },
-  { key: "preview", label: "Preview" },
-  { key: "radio", label: "Radio" },
-];
-
-function NowPlayingItem({
-  item,
-  outputDevice,
-  onStop,
-  onChangeOutputKey,
-  initialPosition = 0, // resume position from parent
-}) {
+function NowPlayingItem({ item, outputDevice, onStop, onChangeOutputKey }) {
   const audioRef = useRef(null);
-  const progressRailRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isLooping, setIsLooping] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(item.track.durationSec || 0);
-  const [hasEnded, setHasEnded] = useState(false);
+  const [currentTime, setCurrentTime] = useState(item.resumeAt || 0);
+  const [duration, setDuration] = useState(item.track?.durationSec || 0);
   const [volume, setVolume] = useState(1);
 
-  // Main setup: sink, volume, listeners, initial seek, play
+  // ----- Helpers to read track info -----
+
+  const title =
+    item.track?.alias ||
+    item.track?.name ||
+    item.track?.title ||
+    'Untitled';
+
+  const trackSrc = `http://localhost:3000/media/audio/${item.track.fileName}`;
+
+  // ----- Sink (output device) -----
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Try several possible shapes:
+    // - { deviceId: '...' }  (what I assumed)
+    // - { id: '...' }        (what enumerateDevices() uses)
+    // - '...'                (plain sinkId string)
+    const sinkId =
+      (outputDevice && outputDevice.deviceId) ||
+      (outputDevice && outputDevice.id) ||
+      (typeof outputDevice === 'string' ? outputDevice : null);
+
+    if (!sinkId) {
+      console.debug('[NowPlayingItem] no sinkId for outputDevice:', outputDevice);
+      return;
+    }
+
+    if (typeof audio.setSinkId !== 'function') {
+      console.debug('[NowPlayingItem] setSinkId not supported in this browser');
+      return;
+    }
+
+    audio
+      .setSinkId(sinkId)
+      .then(() => {
+        console.debug('[NowPlayingItem] setSinkId OK:', sinkId);
+      })
+      .catch((err) => {
+        console.error('[NowPlayingItem] setSinkId failed:', err);
+      });
+  }, [outputDevice]);
+
+  // ----- Attach audio event listeners -----
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime || 0);
-      if (audio.duration && isFinite(audio.duration)) {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const handleLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration)) {
         setDuration(audio.duration);
+      }
+      // resume from item.resumeAt if set:
+      if (item.resumeAt && item.resumeAt > 0) {
+        audio.currentTime = item.resumeAt;
       }
     };
 
     const handleEnded = () => {
-      if (!audio.loop) {
-        setIsPlaying(false);
-        setHasEnded(true);
-      }
+      setIsPlaying(false);
     };
 
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("ended", handleEnded);
-
-    const setup = async () => {
-      // route to correct device (role -> device resolved in parent)
-      if (
-        outputDevice &&
-        outputDevice.id &&
-        outputDevice.id !== "default" &&
-        typeof audio.setSinkId === "function"
-      ) {
-        try {
-          await audio.setSinkId(outputDevice.id);
-        } catch (err) {
-          console.warn("[NowPlayingItem] setSinkId failed", err);
-        }
-      }
-
-      // initial volume
-      audio.volume = volume;
-
-      // seek to resume position (if any)
-      if (initialPosition && Number.isFinite(initialPosition)) {
-        try {
-          audio.currentTime = initialPosition;
-        } catch (err) {
-          console.warn("Failed to seek to initialPosition", err);
-        }
-      }
-
-      try {
-        await audio.play();
-        setIsPlaying(true);
-      } catch (err) {
-        console.warn("Autoplay failed, user interaction may be required", err);
-        setIsPlaying(!audio.paused);
-      }
-    };
-
-    setup();
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
 
     return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
     };
-  }, [item.id, outputDevice?.id, initialPosition]);
+  }, [item.resumeAt]);
 
-  // Keep DOM volume in sync
+  // ----- React to isPlaying -----
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) audio.volume = volume;
-  }, [volume]);
-
-  // Auto-remove 5 minutes after natural end
-  useEffect(() => {
-    if (!hasEnded) return;
-    const timeoutId = setTimeout(() => {
-      onStop();
-    }, 5 * 60 * 1000);
-    return () => clearTimeout(timeoutId);
-  }, [hasEnded, onStop]);
-
-  const togglePlayPause = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (audio.paused) {
+    if (isPlaying) {
       audio
         .play()
-        .then(() => {
-          setIsPlaying(true);
-          setHasEnded(false);
-        })
-        .catch((err) =>
-          console.warn("Play failed, maybe blocked by browser", err)
-        );
+        .catch((err) => {
+          console.warn('Admin local play() failed:', err);
+        });
     } else {
       audio.pause();
-      setIsPlaying(false);
     }
-  };
+  }, [isPlaying]);
 
-  const toggleLoop = () => {
+  // ----- React to volume & loop -----
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const newLoop = !isLooping;
-    audio.loop = newLoop;
-    setIsLooping(newLoop);
-  };
+    audio.volume = volume;
+  }, [volume]);
 
-  const handleSeek = (event) => {
-    const rail = progressRailRef.current;
+  useEffect(() => {
     const audio = audioRef.current;
-    if (!rail || !audio || !duration) return;
+    if (!audio) return;
+    audio.loop = isLooping;
+  }, [isLooping]);
 
-    const rect = rail.getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / rect.width;
-    const clampedRatio = Math.min(1, Math.max(0, ratio));
-    const newTime = clampedRatio * duration;
+  // ----- UI callbacks passed down to View -----
 
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
+  const handlePlayPause = () => {
+    setIsPlaying((prev) => !prev);
   };
 
-  const handleVolumeChange = (e) => {
-    const v = Number(e.target.value); // 0–100
-    setVolume(Math.min(1, Math.max(0, v / 100)));
+  const handleLoopToggle = () => {
+    setIsLooping((prev) => !prev);
   };
 
-  // When role changes, send currentTime up so parent can store resumeAt
-  const handleRoleChange = (e) => {
-    const newKey = e.target.value;
-    if (newKey === item.outputKey) return;
-
+  const handleSeek = (newPos) => {
     const audio = audioRef.current;
-    const pos = audio ? audio.currentTime : 0;
-
-    if (typeof onChangeOutputKey === "function") {
-      onChangeOutputKey(newKey, pos);
+    setCurrentTime(newPos);
+    if (audio) {
+      audio.currentTime = newPos;
+      // keep playing if already playing
+      if (isPlaying) {
+        audio
+          .play()
+          .catch((err) =>
+            console.warn('play() after seek failed (admin):', err),
+          );
+      }
     }
   };
 
-  const progress = duration > 0 ? currentTime / duration : 0;
+  const handleVolumeChange = (v) => {
+    setVolume(v);
+  };
+
+  const handleRoleChange = (newKey) => {
+    if (!onChangeOutputKey) return;
+    if (newKey === item.outputKey) return;
+    // pass current position so SoundControlPanel can store resumeAt
+    onChangeOutputKey(newKey, currentTime);
+  };
+
+  const handleStopClick = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    if (onStop) onStop();
+  };
 
   return (
-    <div className="now-playing-item">
+    <>
+      {/* Hidden local audio element for this item */}
       <audio
         ref={audioRef}
-        src={`http://localhost:3000/media/audio/${item.track.fileName}`}
-        preload="metadata"
+        src={trackSrc}
+        style={{ display: 'none' }}
+      // autoplay is handled by isPlaying effect
       />
-
-      <div className="np-main">
-        <div className="np-title-row">
-          <div className="np-title">{item.track.alias}</div>
-
-          <div className="np-role-wrapper">
-            <select
-              className="np-role-select"
-              value={item.outputKey}
-              onChange={handleRoleChange}
-            >
-              {OUTPUT_ROLES.map((role) => (
-                <option key={role.key} value={role.key}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div
-          className="np-progress-rail"
-          ref={progressRailRef}
-          onClick={handleSeek}
-        >
-          <div
-            className="np-progress-fill"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
-
-        <div className="np-meta-row">
-          <span className="np-time">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
-
-          <div className="np-volume">
-            <span className="np-volume-icon">🔊</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={Math.round(volume * 100)}
-              onChange={handleVolumeChange}
-              className="np-volume-input"
-            />
-          </div>
-
-          <div className="np-controls">
-            <button
-              type="button"
-              className={"np-control-button" + (isLooping ? " active" : "")}
-              onClick={toggleLoop}
-              title="Loop"
-            >
-              ⟳
-            </button>
-
-            <button
-              type="button"
-              className="np-control-button"
-              onClick={togglePlayPause}
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? "⏸" : "▶"}
-            </button>
-
-            <button
-              type="button"
-              className="np-control-button danger"
-              onClick={onStop}
-              title="Stop and remove"
-            >
-              ⏹
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <NowPlayingItemView
+        title={title}
+        outputKey={item.outputKey}
+        availableRoles={['speakers', 'preview', 'radio']}
+        isPlaying={isPlaying}
+        isLooping={isLooping}
+        currentTime={currentTime}
+        duration={duration}
+        volume={volume}
+        onPlayPause={handlePlayPause}
+        onLoopToggle={handleLoopToggle}
+        onSeek={handleSeek}
+        onVolumeChange={handleVolumeChange}
+        onRoleChange={handleRoleChange}
+        onStop={handleStopClick}
+      />
+    </>
   );
 }
 

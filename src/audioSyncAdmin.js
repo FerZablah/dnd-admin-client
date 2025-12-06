@@ -11,6 +11,12 @@ export function selectTrackForClients(audioId, trackId) {
   socket.emit('admin:audio:select', { audioId, trackId });
 }
 
+export function clearForClients(audioId) {
+  if (!audioId) return;
+  socket.emit('admin:audio:clear', { audioId });
+}
+
+
 /**
  * Start playing this audio at given position (seconds).
  */

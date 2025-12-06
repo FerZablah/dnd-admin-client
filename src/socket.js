@@ -1,12 +1,16 @@
 // src/socket.js
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client';
 
-// For Vite, set VITE_BACKEND_WS_URL in .env if you want
-const URL = import.meta.env.VITE_BACKEND_WS_URL || "http://localhost:3000";
+// Point this to your backend Socket.IO endpoint
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
-const socket = io(URL, {
-  // optional but usually fine
-  transports: ["websocket"],
+const socket = io(SOCKET_URL, {
+  transports: ['websocket'],
 });
 
+// ✅ Named export
+export { socket };
+
+// ✅ Default export (for any old `import socket from './socket'`)
 export default socket;

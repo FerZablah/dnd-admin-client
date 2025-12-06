@@ -7,6 +7,7 @@ import TrackList from "./TrackList";
 import NowPlayingPanel from "./NowPlayingPanel";
 import { fetchCategories } from "./categoryApi";
 import { fetchProjects } from "./projectApi";
+import { clearForClients } from "./audioSyncAdmin";
 
 const OUTPUT_STORAGE_KEY = "soundDeck.outputConfig";
 
@@ -155,7 +156,7 @@ function SoundControlPanel() {
       {
         id,
         track,
-        outputKey, // "speakers" | "preview"
+        outputKey, // "speakers" | "preview" | "radio"
         startedAt: Date.now(),
       },
     ]);
@@ -174,7 +175,19 @@ function SoundControlPanel() {
       )
     );
   };
+  const handleClearRadio = () => {
+    setNowPlaying((prev) => {
+      const radios = prev.filter((item) => item.outputKey === 'radio');
 
+      // Tell backend to reset each radio channel
+      radios.forEach((item) => {
+        clearForClients(item.id);
+      });
+
+      // Remove radio items from admin's nowPlaying state
+      return prev.filter((item) => item.outputKey !== 'radio');
+    });
+  };
   if (metaLoading) {
     return (
       <div className="sound-control">
@@ -225,29 +238,29 @@ function SoundControlPanel() {
               outputConfig={outputConfig}
               onChangeOutput={handleChangeOutput}
             />
+              <button
+    type="button"
+    className="sound-control-clear-radio-btn"
+    onClick={handleClearRadio}
+    style={{ marginLeft: '8px', marginBottom: '8px' }}
+  >
+    Clear radio
+  </button>
             <TrackList
-              category={selectedCategory}
-              onPlaySpeakers={(track) => handleStartPlayback(track, "speakers")}
-              onPlayPreview={(track) => handleStartPlayback(track, "preview")}
+              category={selectedProject}
+              onPlaySpeakers={(track) => handleStartPlayback(track, 'speakers')}
+              onPlayPreview={(track) => handleStartPlayback(track, 'preview')}
               onPlayRadio={(track) => {
-                // TODO: later you can use selectedProjectId + category to drive radio
-                console.log("Play on radio (stub):", {
-                  trackId: track.id,
-                  projectId: selectedProjectId,
-                });
+                handleStartPlayback(track, 'radio');
               }}
             />
-            { selectedProject && 
+            {selectedProject &&
               <TrackList
-                category={selectedProject}
-                onPlaySpeakers={(track) => handleStartPlayback(track, "speakers")}
-                onPlayPreview={(track) => handleStartPlayback(track, "preview")}
+                category={selectedCategory}
+                onPlaySpeakers={(track) => handleStartPlayback(track, 'speakers')}
+                onPlayPreview={(track) => handleStartPlayback(track, 'preview')}
                 onPlayRadio={(track) => {
-                  // TODO: later you can use selectedProjectId + category to drive radio
-                  console.log("Play on radio (stub):", {
-                    trackId: track.id,
-                    projectId: selectedProjectId,
-                  });
+                  handleStartPlayback(track, 'radio');
                 }}
               />
             }

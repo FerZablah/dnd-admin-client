@@ -15,7 +15,7 @@ function TrackList({ category, onPlaySpeakers, onPlayPreview, onPlayRadio }) {
       </section>
     );
   }
-
+  
   return (
     <section className="track-list">
       <div className="track-list-inner">
